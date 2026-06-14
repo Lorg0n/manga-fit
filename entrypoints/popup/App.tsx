@@ -31,6 +31,22 @@ function App() {
     });
   }, []);
 
+  useEffect(() => {
+    const handleUnload = () => {
+      if (view === 'edit' && currentTabId) {
+        browser.tabs.sendMessage(currentTabId, { action: 'CLEAR_PREVIEW' });
+      }
+    };
+
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('unload', handleUnload);
+
+    return () => {
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('unload', handleUnload);
+    };
+  }, [view, currentTabId]);
+
   const savePresetsToStorage = async (newPresets: Preset[]) => {
     setPresets(newPresets);
     await storage.setItem('local:panelfit_presets', newPresets);
@@ -86,12 +102,33 @@ function App() {
 
   const handleUpdateTempPreset = (updates: Partial<Preset>) => {
     if (tempPreset) {
-      setTempPreset({ ...tempPreset, ...updates });
+      const nextPreset = { ...tempPreset, ...updates };
+      setTempPreset(nextPreset);
+
+      // Instantly apply the updated properties as a preview
+      if (currentTabId) {
+        browser.tabs.sendMessage(currentTabId, { action: 'APPLY_PREVIEW', preset: nextPreset }).catch(() => {});
+      }
     }
+  };
+
+  const handleBackToList = () => {
+    // Revert styling preview on exit
+    if (currentTabId) {
+      browser.tabs.sendMessage(currentTabId, { action: 'CLEAR_PREVIEW' }).catch(() => {});
+    }
+    setView('list');
+    setEditingPresetId(null);
+    setTempPreset(null);
   };
 
   const handleSavePreset = async () => {
     if (!tempPreset) return;
+
+    // Reset the preview buffer state right before committing permanently
+    if (currentTabId) {
+      await browser.tabs.sendMessage(currentTabId, { action: 'CLEAR_PREVIEW' }).catch(() => {});
+    }
 
     let updatedPresets: Preset[];
     const exists = presets.some((p) => p.id === tempPreset.id);
@@ -109,6 +146,9 @@ function App() {
   };
 
   const handleDeletePreset = async (id: string) => {
+    if (currentTabId) {
+      await browser.tabs.sendMessage(currentTabId, { action: 'CLEAR_PREVIEW' }).catch(() => {});
+    }
     const updated = presets.filter((p) => p.id !== id);
     await savePresetsToStorage(updated);
     setView('list');
@@ -189,7 +229,7 @@ function App() {
           <PresetEditor
             tempPreset={tempPreset}
             isPickable={!!isPickable}
-            onBack={() => setView('list')}
+            onBack={handleBackToList}
             onUpdate={handleUpdateTempPreset}
             onStartPicking={startPicking}
             onSave={handleSavePreset}
