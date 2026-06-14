@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { browser, storage } from '#imports';
 import { doesUrlMatch, generateSmartPattern } from '@/utils/helpers';
 import type { Preset } from '@/utils/types';
+import { PresetCard } from './components/PresetCard';
+import { PresetEditor } from './components/PresetEditor';
+import { Search, Target, Plus } from 'lucide-react';
 import './App.css';
 
 type View = 'list' | 'edit';
@@ -12,6 +15,7 @@ function App() {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [view, setView] = useState<View>('list');
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+  const [tempPreset, setTempPreset] = useState<Preset | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -27,7 +31,7 @@ function App() {
     });
   }, []);
 
-  const savePresets = async (newPresets: Preset[]) => {
+  const savePresetsToStorage = async (newPresets: Preset[]) => {
     setPresets(newPresets);
     await storage.setItem('local:panelfit_presets', newPresets);
   };
@@ -39,7 +43,13 @@ function App() {
     }
   };
 
-  const handleCreateManual = async () => {
+  const handleEditClick = (preset: Preset) => {
+    setEditingPresetId(preset.id);
+    setTempPreset({ ...preset });
+    setView('edit');
+  };
+
+  const handleCreateManual = () => {
     let defaultName = 'New Preset';
     let defaultPattern = '*';
     
@@ -49,7 +59,7 @@ function App() {
         defaultName = urlObj.hostname;
         defaultPattern = generateSmartPattern(currentUrl);
       } catch (e) {
-        // Fallback for unexpected URL formats
+        // Safe fallback
       }
     }
 
@@ -62,34 +72,50 @@ function App() {
       enabled: true,
     };
 
-    const updatedPresets = [...presets, newPreset];
-    await savePresets(updatedPresets);
     setEditingPresetId(newPreset.id);
+    setTempPreset(newPreset);
     setView('edit');
   };
 
-  const handleTogglePreset = async (id: string) => {
+  const handleTogglePresetInList = async (id: string) => {
     const updated = presets.map((p) =>
       p.id === id ? { ...p, enabled: !p.enabled } : p
     );
-    await savePresets(updated);
+    await savePresetsToStorage(updated);
   };
 
-  const handleUpdatePreset = async (id: string, updates: Partial<Preset>) => {
-    const updated = presets.map((p) =>
-      p.id === id ? { ...p, ...updates } : p
-    );
-    await savePresets(updated);
+  const handleUpdateTempPreset = (updates: Partial<Preset>) => {
+    if (tempPreset) {
+      setTempPreset({ ...tempPreset, ...updates });
+    }
+  };
+
+  const handleSavePreset = async () => {
+    if (!tempPreset) return;
+
+    let updatedPresets: Preset[];
+    const exists = presets.some((p) => p.id === tempPreset.id);
+
+    if (exists) {
+      updatedPresets = presets.map((p) => (p.id === tempPreset.id ? tempPreset : p));
+    } else {
+      updatedPresets = [...presets, tempPreset];
+    }
+
+    await savePresetsToStorage(updatedPresets);
+    setView('list');
+    setEditingPresetId(null);
+    setTempPreset(null);
   };
 
   const handleDeletePreset = async (id: string) => {
     const updated = presets.filter((p) => p.id !== id);
-    await savePresets(updated);
+    await savePresetsToStorage(updated);
     setView('list');
     setEditingPresetId(null);
+    setTempPreset(null);
   };
 
-  const activePreset = presets.find((p) => editingPresetId === p.id);
   const isPickable = currentUrl && (currentUrl.startsWith('http://') || currentUrl.startsWith('https://'));
 
   const filteredPresets = presets.filter((p) => {
@@ -106,61 +132,40 @@ function App() {
       {view === 'list' ? (
         <div className="list-view">
           <div className="header-row">
-            <h2>PanelFit Manager</h2>
+            <h2>PanelFit</h2>
             <span className="badge-count">{presets.length} profiles</span>
           </div>
 
-          {presets.length > 0 && (
-            <div className="search-box">
-              <input
-                type="text"
-                placeholder="Search presets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          )}
+          <div className="search-box">
+            <span className="search-icon"><Search size={14} /></span>
+            <input
+              type="text"
+              placeholder="Search presets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
           <div className="presets-list">
             {filteredPresets.length === 0 ? (
               <div className="empty-state">
                 <p className="desc">
                   {presets.length === 0
-                    ? "No patterns defined yet. Start matching website images to dynamically adjust their dimensions."
-                    : "No matching presets found."}
+                    ? "No layout rules defined. Configure patterns to adjust custom image dimensions."
+                    : "No matching rules found."}
                 </p>
               </div>
             ) : (
-              filteredPresets.map((preset) => {
-                const matchesCurrent = currentUrl && doesUrlMatch(currentUrl, preset.urlPattern);
-                return (
-                  <div
-                    key={preset.id}
-                    className={`preset-card ${matchesCurrent ? 'matches-current' : ''}`}
-                  >
-                    <div className="preset-info" onClick={() => {
-                      setEditingPresetId(preset.id);
-                      setView('edit');
-                    }}>
-                      <div className="preset-header">
-                        <span className="preset-name">{preset.name}</span>
-                        {matchesCurrent && <span className="active-badge">Active</span>}
-                      </div>
-                      <span className="preset-pattern">{preset.urlPattern}</span>
-                    </div>
-                    <div className="preset-actions-cell">
-                      <label className="switch" title="Toggle active status">
-                        <input
-                          type="checkbox"
-                          checked={preset.enabled}
-                          onChange={() => handleTogglePreset(preset.id)}
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                );
-              })
+              filteredPresets.map((preset) => (
+                <PresetCard
+                  key={preset.id}
+                  preset={preset}
+                  currentUrl={currentUrl}
+                  onEditClick={handleEditClick}
+                  onTogglePreset={handleTogglePresetInList}
+                  doesUrlMatch={doesUrlMatch}
+                />
+              ))
             )}
           </div>
 
@@ -169,98 +174,27 @@ function App() {
               onClick={startPicking}
               className="btn-primary flex-btn"
               disabled={!isPickable}
-              title={!isPickable ? "Cannot pick elements on extension or system pages" : "Start element picker"}
-              style={!isPickable ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+              title={!isPickable ? "Cannot pick elements on system or empty pages" : "Open element selector"}
+              style={!isPickable ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
             >
-              🎯 Pick on Current Page
+              <Target size={14} /> Pick on Page
             </button>
             <button onClick={handleCreateManual} className="btn-secondary flex-btn">
-              ➕ Add Manual Rule
+              <Plus size={14} /> Add Manual
             </button>
           </div>
         </div>
       ) : (
-        activePreset && (
-          <div className="editor-view">
-            <div className="editor-header">
-              <button onClick={() => setView('list')} className="btn-back">
-                &larr; Back to list
-              </button>
-              <span className="editor-title">Edit Preset</span>
-            </div>
-
-            <div className="form-group">
-              <label>Preset Name</label>
-              <input
-                type="text"
-                value={activePreset.name}
-                onChange={(e) => handleUpdatePreset(activePreset.id, { name: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>URL Pattern (Uses * for wildcards)</label>
-              <input
-                type="text"
-                value={activePreset.urlPattern}
-                onChange={(e) => handleUpdatePreset(activePreset.id, { urlPattern: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>CSS Selector (Target Elements)</label>
-              <div className="input-row">
-                <input
-                  type="text"
-                  value={activePreset.selector}
-                  onChange={(e) => handleUpdatePreset(activePreset.id, { selector: e.target.value })}
-                />
-                <button
-                  onClick={startPicking}
-                  disabled={!isPickable}
-                  className="btn-icon"
-                  title={!isPickable ? "Cannot pick on this tab" : "Repick on page"}
-                  style={!isPickable ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                >
-                  🎯
-                </button>
-              </div>
-            </div>
-
-            <div className="form-group slider-group">
-              <label>Width: <strong>{activePreset.width}%</strong></label>
-              <input
-                type="range"
-                min="10"
-                max="200"
-                value={activePreset.width}
-                onChange={(e) => handleUpdatePreset(activePreset.id, { width: parseInt(e.target.value, 10) })}
-              />
-            </div>
-
-            <div className="form-group switch-form-group">
-              <label>Status</label>
-              <div className="switch-with-label">
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={activePreset.enabled}
-                    onChange={() => handleTogglePreset(activePreset.id)}
-                  />
-                  <span className="slider"></span>
-                </label>
-                <span className="switch-status-text">
-                  {activePreset.enabled ? 'Enabled' : 'Disabled'}
-                </span>
-              </div>
-            </div>
-
-            <div className="actions">
-              <button onClick={() => handleDeletePreset(activePreset.id)} className="btn-danger">
-                Delete Preset
-              </button>
-            </div>
-          </div>
+        tempPreset && (
+          <PresetEditor
+            tempPreset={tempPreset}
+            isPickable={!!isPickable}
+            onBack={() => setView('list')}
+            onUpdate={handleUpdateTempPreset}
+            onStartPicking={startPicking}
+            onSave={handleSavePreset}
+            onDelete={handleDeletePreset}
+          />
         )
       )}
     </div>
