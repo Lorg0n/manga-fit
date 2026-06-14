@@ -1,6 +1,6 @@
 import { storage } from '#imports';
 import { initPicker } from './picker';
-import { applyCustomStyle, removeCustomStyle } from './resizer';
+import { applyCustomStyles, removeCustomStyle } from './resizer';
 import { doesUrlMatch } from '@/utils/helpers';
 import type { Preset } from '@/utils/types';
 
@@ -13,20 +13,23 @@ export default defineContentScript({
     let previewPreset: Preset | null = null;
 
     const checkAndApplyPresets = async () => {
+      const presets = await storage.getItem<Preset[]>('local:panelfit_presets') || [];
+      
+      // Filter out all enabled presets that match the current page pattern
+      let activePresets = presets.filter(p => p.enabled && doesUrlMatch(currentUrl, p.urlPattern));
+
+      // Merge real-time edits from popup preview if active
       if (previewPreset) {
-        if (previewPreset.enabled && previewPreset.selector) {
-          applyCustomStyle(previewPreset.selector, previewPreset.width);
+        const hasDraftId = activePresets.some(p => p.id === previewPreset!.id);
+        if (hasDraftId) {
+          activePresets = activePresets.map(p => p.id === previewPreset!.id ? previewPreset! : p);
         } else {
-          removeCustomStyle();
+          activePresets.push(previewPreset);
         }
-        return;
       }
 
-      const presets = await storage.getItem<Preset[]>('local:panelfit_presets') || [];
-      const activePreset = presets.find(p => p.enabled && doesUrlMatch(currentUrl, p.urlPattern));
-
-      if (activePreset && activePreset.selector) {
-        applyCustomStyle(activePreset.selector, activePreset.width);
+      if (activePresets.length > 0) {
+        applyCustomStyles(activePresets);
       } else {
         removeCustomStyle();
       }

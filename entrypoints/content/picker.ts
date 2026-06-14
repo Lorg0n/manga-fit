@@ -134,6 +134,38 @@ export function initPicker() {
   }, { capture: true });
 }
 
+/**
+ * Builds a deterministic, descriptive name depending on target structural wrappers
+ * to prevent duplicates and maintain readability.
+ */
+function generateUniquePresetName(hostname: string, selector: string, existingPresets: Preset[]): string {
+  let suffix = '';
+  const lowerSelector = selector.toLowerCase();
+  
+  if (lowerSelector.includes('thumb')) {
+    suffix = ' - Thumbnails';
+  } else if (lowerSelector.includes('img') || lowerSelector.includes('image') || lowerSelector.includes('comic')) {
+    suffix = ' - Images';
+  } else {
+    // Take the clean trailing selector element name
+    const cleanSel = selector.split(/[ >.#:]/).filter(Boolean).pop();
+    if (cleanSel) {
+      suffix = ` - ${cleanSel.charAt(0).toUpperCase() + cleanSel.slice(1)}`;
+    }
+  }
+
+  const baseName = `${hostname}${suffix}`;
+  let candidateName = baseName;
+  let counter = 1;
+
+  while (existingPresets.some(p => p.name === candidateName)) {
+    counter++;
+    candidateName = `${baseName} (${counter})`;
+  }
+
+  return candidateName;
+}
+
 async function finishPicking() {
   isPickingMode = false;
   document.body.style.cursor = '';
@@ -146,15 +178,22 @@ async function finishPicking() {
 
   const currentUrl = window.location.href;
   const presets = await storage.getItem<Preset[]>('local:panelfit_presets') || [];
-  let matched = presets.find(p => doesUrlMatch(currentUrl, p.urlPattern));
+  
+  const pattern = generateSmartPattern(currentUrl);
+  
+  // Try to find a preset with the exact matching pattern and selector to prevent overwrites
+  let matched = presets.find(p => p.urlPattern === pattern && p.selector === finalSelector);
   
   if (matched) {
-    matched.selector = finalSelector;
+    matched.enabled = true;
   } else {
+    const hostname = window.location.hostname;
+    const uniqueName = generateUniquePresetName(hostname, finalSelector, presets);
+    
     matched = {
       id: Date.now().toString(),
-      name: window.location.hostname,
-      urlPattern: generateSmartPattern(currentUrl),
+      name: uniqueName,
+      urlPattern: pattern,
       selector: finalSelector,
       width: 100,
       enabled: true

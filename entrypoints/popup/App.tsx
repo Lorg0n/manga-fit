@@ -26,9 +26,7 @@ function App() {
         setCurrentTabId(tabId);
         
         if (tabId) {
-          browser.tabs.sendMessage(tabId, { action: 'STOP_PICKING' }).catch(() => {
-            // Fail silently if content script isn't loaded on this page
-          });
+          browser.tabs.sendMessage(tabId, { action: 'STOP_PICKING' }).catch(() => {});
         }
       }
     });
@@ -86,9 +84,17 @@ function App() {
       }
     }
 
+    // Sequentially verify uniqueness among existing rules to prevent overwrite collisions
+    let uniqueName = defaultName;
+    let counter = 1;
+    while (presets.some(p => p.name === uniqueName)) {
+      counter++;
+      uniqueName = `${defaultName} (${counter})`;
+    }
+
     const newPreset: Preset = {
       id: Date.now().toString(),
-      name: defaultName,
+      name: uniqueName,
       urlPattern: defaultPattern,
       selector: 'img',
       width: 100,
@@ -112,7 +118,6 @@ function App() {
       const nextPreset = { ...tempPreset, ...updates };
       setTempPreset(nextPreset);
 
-      // Instantly apply the updated properties as a preview
       if (currentTabId) {
         browser.tabs.sendMessage(currentTabId, { action: 'APPLY_PREVIEW', preset: nextPreset }).catch(() => {});
       }
@@ -120,7 +125,6 @@ function App() {
   };
 
   const handleBackToList = () => {
-    // Revert styling preview on exit
     if (currentTabId) {
       browser.tabs.sendMessage(currentTabId, { action: 'CLEAR_PREVIEW' }).catch(() => {});
     }
@@ -132,7 +136,6 @@ function App() {
   const handleSavePreset = async () => {
     if (!tempPreset) return;
 
-    // Reset the preview buffer state right before committing permanently
     if (currentTabId) {
       await browser.tabs.sendMessage(currentTabId, { action: 'CLEAR_PREVIEW' }).catch(() => {});
     }
