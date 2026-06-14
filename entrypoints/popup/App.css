@@ -1,22 +1,24 @@
-/* Color Palette Variables - Green/Black aesthetic */
+/* Color Palette Variables - Customized to fit the uploaded icon's colors */
 :root {
   --bg-main: #121212;
-  --bg-card: #1a1a1a;
-  --bg-input: #242424;
-  --border: #2d2d2d;
-  --border-hover: #3a3a3a;
-  --border-focus: #67D55E;
+  --bg-card: #1c1c1e;
+  --bg-input: #262629;
+  --border: #323236;
+  --border-hover: #45454a;
+  --border-focus: #13b4c4; /* Teal focus indicator */
   
-  --accent: #67D55E;
-  --accent-hover: #56b54e;
-  --accent-subtle: rgba(103, 213, 94, 0.08);
+  --accent: #13b4c4; /* Cyan/Teal from top-left element of logo */
+  --accent-hover: #0fb4c4;
+  --accent-subtle: rgba(19, 180, 196, 0.08);
   
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
+  --danger: #c31e3f; /* Crimson/Red from top-right element of logo */
+  --danger-hover: #a31430;
+
+  --success: #65c449; /* Green from bottom-right element of logo */
   
   --text-main: #ffffff;
-  --text-sub: #aaaaaa;
-  --text-muted: #666666;
+  --text-sub: #a1a1aa;
+  --text-muted: #71717a;
 }
 
 .container {
@@ -302,7 +304,7 @@ h2 {
 }
 
 input:checked + .slider {
-  background-color: var(--accent);
+  background-color: var(--success);
 }
 
 input:checked + .slider:before {
@@ -465,7 +467,7 @@ input[type="text"]:focus {
 }
 
 .btn-danger:hover {
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgba(195, 30, 63, 0.1);
 }
 
 .btn-save {

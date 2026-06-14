@@ -4,7 +4,7 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: "PanelFit - Smart Image Resizer",
+    name: "MangaFit - Comic & Webtoon Resizer",
     description: "Easily scale and fit images or comic panels on any website.",
     version: "0.1",
     permissions: ["storage", "activeTab", "scripting"],

@@ -1,7 +1,7 @@
 import type { Preset } from '@/utils/types';
 
 export function applyCustomStyles(activePresets: Preset[]) {
-  const styleId = 'panelfit-custom-style';
+  const styleId = 'mangafit-custom-style';
   let styleTag = document.getElementById(styleId);
   
   if (!styleTag) {
@@ -38,6 +38,6 @@ export function applyCustomStyles(activePresets: Preset[]) {
 }
 
 export function removeCustomStyle() {
-  const styleTag = document.getElementById('panelfit-custom-style');
+  const styleTag = document.getElementById('mangafit-custom-style');
   if (styleTag) styleTag.remove();
 }

@@ -12,7 +12,7 @@ function createControlPanel() {
   if (controlPanel) return;
   
   controlPanel = document.createElement('div');
-  controlPanel.id = 'panelfit-picker-panel';
+  controlPanel.id = 'mangafit-picker-panel';
   controlPanel.innerHTML = `
     <div style="
       position: fixed;
@@ -30,11 +30,11 @@ function createControlPanel() {
       display: flex;
       align-items: center;
       gap: 16px;
-      border: 1px solid #67D55E;
+      border: 1px solid #13b4c4;
     ">
-      <span><strong>PanelFit Picker:</strong> Hold <strong>Ctrl</strong> to select multiple panels, then click Done.</span>
-      <button id="panelfit-btn-done" style="
-        background: #67D55E;
+      <span><strong>MangaFit Picker:</strong> Hold <strong>Ctrl</strong> to select multiple panels, then click Done.</span>
+      <button id="mangafit-btn-done" style="
+        background: #13b4c4;
         color: #111;
         border: none;
         padding: 6px 16px;
@@ -42,7 +42,7 @@ function createControlPanel() {
         font-weight: bold;
         cursor: pointer;
       ">Done</button>
-      <button id="panelfit-btn-cancel" style="
+      <button id="mangafit-btn-cancel" style="
         background: #444;
         color: #fff;
         border: none;
@@ -54,11 +54,11 @@ function createControlPanel() {
   `;
   document.body.appendChild(controlPanel);
 
-  document.getElementById('panelfit-btn-done')?.addEventListener('click', () => {
+  document.getElementById('mangafit-btn-done')?.addEventListener('click', () => {
     finishPicking();
   });
 
-  document.getElementById('panelfit-btn-cancel')?.addEventListener('click', () => {
+  document.getElementById('mangafit-btn-cancel')?.addEventListener('click', () => {
     cancelPicking();
   });
 }
@@ -92,7 +92,7 @@ export function initPicker() {
     if (controlPanel && controlPanel.contains(target)) return;
 
     if (target.tagName === 'IMG' && !selectedElements.includes(target)) {
-      target.style.outline = '4px dashed #646cff';
+      target.style.outline = '4px dashed #13b4c4';
       target.style.outlineOffset = '-4px';
       hoveredElement = target;
     }
@@ -119,7 +119,7 @@ export function initPicker() {
 
     if (e.ctrlKey || e.metaKey) {
       if (!selectedElements.includes(target)) {
-        target.style.outline = '4px solid #4CAF50';
+        target.style.outline = '4px solid #65c449';
         selectedElements.push(target);
       }
     } else {
@@ -128,7 +128,7 @@ export function initPicker() {
         finishPicking();
       } else {
         if (!selectedElements.includes(target)) {
-          target.style.outline = '4px solid #4CAF50';
+          target.style.outline = '4px solid #65c449';
           selectedElements.push(target);
         }
       }
@@ -174,7 +174,7 @@ async function finishPicking() {
   removeControlPanel();
 
   const currentUrl = window.location.href;
-  const presets = await storage.getItem<Preset[]>('local:panelfit_presets') || [];
+  const presets = await storage.getItem<Preset[]>('local:mangafit_presets') || [];
   const pattern = generateSmartPattern(currentUrl);
   
   let matched: Preset | undefined = undefined;
@@ -210,8 +210,8 @@ async function finishPicking() {
   }
   
   activeEditingPresetId = null; // Clear context buffer
-  await storage.setItem('local:panelfit_presets', presets);
-  console.log('[PanelFit] Abstract selector generated:', finalSelector);
+  await storage.setItem('local:mangafit_presets', presets);
+  console.log('[MangaFit] Abstract selector generated:', finalSelector);
 }
 
 function cancelPicking() {

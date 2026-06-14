@@ -31,7 +31,7 @@ function App() {
       }
     });
 
-    storage.getItem<Preset[]>('local:panelfit_presets').then((storedPresets) => {
+    storage.getItem<Preset[]>('local:mangafit_presets').then((storedPresets) => {
       setPresets(storedPresets || []);
     });
   }, []);
@@ -54,7 +54,7 @@ function App() {
 
   const savePresetsToStorage = async (newPresets: Preset[]) => {
     setPresets(newPresets);
-    await storage.setItem('local:panelfit_presets', newPresets);
+    await storage.setItem('local:mangafit_presets', newPresets);
   };
 
   const startPicking = async () => {
@@ -185,7 +185,7 @@ function App() {
       {view === 'list' ? (
         <div className="list-view">
           <div className="header-row">
-            <h2>PanelFit</h2>
+            <h2>MangaFit</h2>
             <span className="badge-count">{presets.length} profiles</span>
           </div>
 

@@ -13,7 +13,7 @@ export default defineContentScript({
     let previewPreset: Preset | null = null;
 
     const checkAndApplyPresets = async () => {
-      const presets = await storage.getItem<Preset[]>('local:panelfit_presets') || [];
+      const presets = await storage.getItem<Preset[]>('local:mangafit_presets') || [];
       
       // Filter out all enabled presets that match the current page pattern
       let activePresets = presets.filter(p => p.enabled && doesUrlMatch(currentUrl, p.urlPattern));
@@ -37,7 +37,7 @@ export default defineContentScript({
 
     checkAndApplyPresets();
 
-    storage.watch<Preset[]>('local:panelfit_presets', () => {
+    storage.watch<Preset[]>('local:mangafit_presets', () => {
       checkAndApplyPresets();
     });
 
