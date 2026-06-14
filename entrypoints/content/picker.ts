@@ -77,6 +77,9 @@ export function initPicker() {
       document.body.style.cursor = 'crosshair';
       createControlPanel();
       sendResponse({ status: 'started' });
+    } else if (message.action === 'STOP_PICKING') {
+      cancelPicking();
+      sendResponse({ status: 'stopped' });
     }
   });
 

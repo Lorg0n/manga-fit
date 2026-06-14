@@ -22,7 +22,14 @@ function App() {
     browser.tabs.query({ active: true, currentWindow: true }).then(async (tabs) => {
       if (tabs[0]?.url) {
         setCurrentUrl(tabs[0].url);
-        setCurrentTabId(tabs[0].id || null);
+        const tabId = tabs[0].id || null;
+        setCurrentTabId(tabId);
+        
+        if (tabId) {
+          browser.tabs.sendMessage(tabId, { action: 'STOP_PICKING' }).catch(() => {
+            // Fail silently if content script isn't loaded on this page
+          });
+        }
       }
     });
 
