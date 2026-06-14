@@ -111,4 +111,4 @@ This project is licensed under the MIT License.
 *   [WXT Next-gen Framework](https://wxt.dev/)
 *   [React](https://react.dev/)
 *   [Lucide Icons](https://lucide.dev/)
-*   [@medv/finder selector generation utility](https://github.com/medv/finder)
+*   [@medv/finder selector generation utility](https://github.com/antonmedv/Finder)
