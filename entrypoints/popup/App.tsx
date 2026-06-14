@@ -59,7 +59,11 @@ function App() {
 
   const startPicking = async () => {
     if (currentTabId) {
-      await browser.tabs.sendMessage(currentTabId, { action: 'START_PICKING' });
+      // Pass the editingPresetId if the user is currently editing an active profile
+      await browser.tabs.sendMessage(currentTabId, { 
+        action: 'START_PICKING',
+        presetId: editingPresetId 
+      });
       window.close();
     }
   };
@@ -84,7 +88,6 @@ function App() {
       }
     }
 
-    // Sequentially verify uniqueness among existing rules to prevent overwrite collisions
     let uniqueName = defaultName;
     let counter = 1;
     while (presets.some(p => p.name === uniqueName)) {

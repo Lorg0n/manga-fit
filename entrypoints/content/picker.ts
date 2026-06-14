@@ -3,6 +3,7 @@ import { browser, storage } from '#imports';
 import type { Preset } from '@/utils/types';
 
 let isPickingMode = false;
+let activeEditingPresetId: string | null = null; 
 let selectedElements: HTMLElement[] = [];
 let hoveredElement: HTMLElement | null = null;
 let controlPanel: HTMLDivElement | null = null;
@@ -73,6 +74,7 @@ export function initPicker() {
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'START_PICKING') {
       isPickingMode = true;
+      activeEditingPresetId = message.presetId || null; // Capture active edit profile context
       selectedElements = [];
       document.body.style.cursor = 'crosshair';
       createControlPanel();
@@ -134,10 +136,6 @@ export function initPicker() {
   }, { capture: true });
 }
 
-/**
- * Builds a deterministic, descriptive name depending on target structural wrappers
- * to prevent duplicates and maintain readability.
- */
 function generateUniquePresetName(hostname: string, selector: string, existingPresets: Preset[]): string {
   let suffix = '';
   const lowerSelector = selector.toLowerCase();
@@ -147,7 +145,6 @@ function generateUniquePresetName(hostname: string, selector: string, existingPr
   } else if (lowerSelector.includes('img') || lowerSelector.includes('image') || lowerSelector.includes('comic')) {
     suffix = ' - Images';
   } else {
-    // Take the clean trailing selector element name
     const cleanSel = selector.split(/[ >.#:]/).filter(Boolean).pop();
     if (cleanSel) {
       suffix = ` - ${cleanSel.charAt(0).toUpperCase() + cleanSel.slice(1)}`;
@@ -178,35 +175,48 @@ async function finishPicking() {
 
   const currentUrl = window.location.href;
   const presets = await storage.getItem<Preset[]>('local:panelfit_presets') || [];
-  
   const pattern = generateSmartPattern(currentUrl);
   
-  // Try to find a preset with the exact matching pattern and selector to prevent overwrites
-  let matched = presets.find(p => p.urlPattern === pattern && p.selector === finalSelector);
-  
-  if (matched) {
-    matched.enabled = true;
-  } else {
-    const hostname = window.location.hostname;
-    const uniqueName = generateUniquePresetName(hostname, finalSelector, presets);
-    
-    matched = {
-      id: Date.now().toString(),
-      name: uniqueName,
-      urlPattern: pattern,
-      selector: finalSelector,
-      width: 100,
-      enabled: true
-    };
-    presets.push(matched);
+  let matched: Preset | undefined = undefined;
+
+  // 1. If we are explicitly repicking for an existing preset, update that profile's selector
+  if (activeEditingPresetId) {
+    matched = presets.find(p => p.id === activeEditingPresetId);
+    if (matched) {
+      matched.selector = finalSelector;
+      matched.enabled = true;
+    }
+  }
+
+  // 2. Fallback to normal matching or appending a new profile if no edit context is provided
+  if (!matched) {
+    matched = presets.find(p => p.urlPattern === pattern && p.selector === finalSelector);
+    if (matched) {
+      matched.enabled = true;
+    } else {
+      const hostname = window.location.hostname;
+      const uniqueName = generateUniquePresetName(hostname, finalSelector, presets);
+      
+      matched = {
+        id: Date.now().toString(),
+        name: uniqueName,
+        urlPattern: pattern,
+        selector: finalSelector,
+        width: 100,
+        enabled: true
+      };
+      presets.push(matched);
+    }
   }
   
+  activeEditingPresetId = null; // Clear context buffer
   await storage.setItem('local:panelfit_presets', presets);
   console.log('[PanelFit] Abstract selector generated:', finalSelector);
 }
 
 function cancelPicking() {
   isPickingMode = false;
+  activeEditingPresetId = null;
   document.body.style.cursor = '';
   selectedElements.forEach(el => el.style.outline = '');
   selectedElements = [];
